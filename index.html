@@ -3,235 +3,287 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Monopoly - Versión web (simplificada)</title>
+  <title>Monopoly - Versión web (mejorada)</title>
+  <meta name="description" content="Monopoly simplificado con interfaz moderna estilo juego online.">
   <style>
-    :root{--bg:#0b1220;--card:#0f1724;--accent:#1f8ef1;--text:#e6eef9}
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:linear-gradient(180deg,#07132a 0%, #071a2f 100%); color:var(--text); margin:0; padding:16px}
-    .container{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:460px 1fr;gap:16px}
-    .board{background:var(--card);border-radius:12px;padding:12px;display:grid;grid-template-columns:repeat(11,1fr);grid-auto-rows:56px;gap:6px}
-    .square{background:rgba(255,255,255,0.03);border-radius:6px;padding:4px;font-size:11px;display:flex;flex-direction:column;justify-content:space-between}
-    .square .name{font-weight:600}
-    .prop{font-size:12px;opacity:0.9}
-    .controls{background:var(--card);border-radius:12px;padding:12px}
-    .log{height:300px;overflow:auto;background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;font-size:13px}
-    button{background:var(--accent);color:#032033;border:none;padding:8px 10px;border-radius:8px;font-weight:700;cursor:pointer}
-    button.secondary{background:transparent;border:1px solid rgba(255,255,255,0.08);color:var(--text);font-weight:600}
-    .players{display:flex;gap:8px;margin-bottom:8px}
-    .player-card{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;flex:1}
-    .board-legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-    .dice{font-size:20px;font-weight:800}
-    .footer{margin-top:12px;font-size:13px;color:rgba(255,255,255,0.6)}
-    .hidden{display:none}
-    /* simple responsive */
-    @media(max-width:900px){.container{grid-template-columns:1fr;}.board{grid-template-columns:repeat(8,1fr)}}
+    /* Reset y variables */
+    :root{
+      --bg-0: #07132a;
+      --bg-1: linear-gradient(180deg,#07132a 0%, #0b2540 100%);
+      --card: rgba(255,255,255,0.03);
+      --glass: rgba(255,255,255,0.05);
+      --accent: linear-gradient(90deg,#5ee7df,#b490ca);
+      --accent-solid: #6ee7b7;
+      --muted: rgba(255,255,255,0.65);
+      --glass-border: rgba(255,255,255,0.06);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;color:#eaf6ff;background:var(--bg-1)}
+    .app{max-width:1200px;margin:20px auto;padding:20px;display:grid;grid-template-columns:360px 1fr;gap:18px}
+
+    /* Panel izquierdo */
+    .panel{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-radius:14px;padding:16px;border:1px solid var(--glass-border);backdrop-filter: blur(6px)}
+    .header{display:flex;align-items:center;gap:12px}
+    .logo{width:52px;height:52px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;color:#05202a}
+    h1{font-size:18px;margin:0}
+    p.lead{margin:6px 0 12px;color:var(--muted);font-size:13px}
+
+    .players-list{display:flex;flex-direction:column;gap:8px}
+    .player{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.02)}
+    .player .avatar{width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,#ffd6a5,#fdffb6);display:flex;align-items:center;justify-content:center;font-weight:700;color:#1b1b1b}
+    .player .meta{flex:1}
+    .player .meta b{display:block}
+    .player .meta small{color:var(--muted)}
+    .player .status{font-size:13px;color:var(--muted)}
+
+    .controls{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+    .big-btn{background:linear-gradient(90deg,#6ee7b7,#7dd3fc);border:none;color:#032033;padding:12px 14px;border-radius:12px;font-weight:800;cursor:pointer;box-shadow:0 6px 18px rgba(10,20,30,0.25)}
+    .secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);padding:8px;border-radius:10px;cursor:pointer}
+
+    .info-row{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:10px}
+    .log{height:220px;overflow:auto;padding:10px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));border:1px dashed rgba(255,255,255,0.02);font-size:13px}
+
+    /* Tablero */
+    .board-wrap{display:flex;flex-direction:column;gap:12px}
+    .board{width:100%;height:680px;background:transparent;display:grid;grid-template-columns:repeat(11,1fr);grid-auto-rows:60px;gap:8px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.03);backdrop-filter: blur(6px)}
+    .square{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:8px;padding:6px;display:flex;flex-direction:column;justify-content:space-between;border:1px solid rgba(255,255,255,0.02);position:relative;overflow:hidden}
+    .square .title{font-size:12px;font-weight:700}
+    .square .sub{font-size:11px;color:var(--muted)}
+    .color-band{height:8px;border-radius:6px;margin-bottom:6px}
+    .token{position:absolute;right:6px;bottom:6px;padding:4px 6px;border-radius:6px;background:rgba(0,0,0,0.35);font-size:12px}
+
+    /* wide bottom area for center board */
+    .center-tile{grid-column:2/span:9;grid-row:2/span:8;display:flex;align-items:center;justify-content:center;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));border:1px solid rgba(255,255,255,0.02);}
+
+    /* responsive */
+    @media(max-width:1100px){ .app{grid-template-columns:1fr;}.board{height:520px} }
+
+    /* small helpers */
+    .muted{color:var(--muted)}
+    .pill{background:rgba(255,255,255,0.02);padding:6px 8px;border-radius:999px;font-weight:700}
+
+    /* animations */
+    .pulse{animation:pulse 1.6s infinite}
+    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.02)}100%{transform:scale(1)}}
+
+    /* modal */
+    .modal-back{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:30}
+    .modal{background:linear-gradient(180deg,#071a2f,#042033);padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);width:460px}
   </style>
 </head>
 <body>
-  <h1>Monopoly - Versión web (simplificada)</h1>
-  <div class="container">
-    <div>
-      <div class="controls">
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-          <label>Jugadores: </label>
-          <select id="playerCount"><option>2</option><option>3</option><option>4</option></select>
-          <button id="startBtn">Iniciar juego</button>
-        </div>
-        <div class="players" id="playersArea"></div>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-          <button id="rollBtn" class="secondary">Tirar dados</button>
-          <div class="dice" id="diceBox">—</div>
-          <button id="endTurnBtn" class="secondary">Terminar turno</button>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-          <button id="buyBtn" class="secondary">Comprar propiedad</button>
-          <button id="useJailCardBtn" class="secondary">Usar carta salir cárcel</button>
-          <button id="payToLeaveBtn" class="secondary">Pagar $50 para salir cárcel</button>
-        </div>
-        <div style="margin-top:8px">
-          <strong>Turno:</strong> <span id="turnLabel">—</span>
-        </div>
-        <div style="margin-top:8px">
-          <strong>Casilla actual:</strong> <span id="spaceLabel">—</span>
-        </div>
-        <div style="margin-top:8px">
-          <div class="log" id="log"></div>
+  <div class="app">
+    <div class="panel">
+      <div class="header">
+        <div class="logo">M</div>
+        <div>
+          <h1>Monopoly — versión mejorada</h1>
+          <p class="lead">Interfaz moderna inspirada en experiencias de juego online. Diseñado para ser responsive y fácil de usar.</p>
         </div>
       </div>
-      <div class="footer">Reglas simplificadas: 2-4 jugadores, $1500 inicial, no hay casas/hoteles, chance/community simplified, cárcel, impuestos, bancarrota.</div>
+
+      <div style="margin-top:12px">
+        <label class="muted">Jugadores</label>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <select id="playerCount"><option>2</option><option>3</option><option>4</option></select>
+          <button id="startBtn" class="big-btn">Crear partida</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="players-list" id="playersArea"></div>
+      </div>
+
+      <div class="controls">
+        <button id="rollBtn" class="big-btn pulse">Tirar Dados</button>
+        <div style="display:flex;gap:8px">
+          <button id="buyBtn" class="secondary">Comprar</button>
+          <button id="endTurnBtn" class="secondary">Terminar Turno</button>
+          <button id="saveBtn" class="secondary">Guardar</button>
+        </div>
+        <div class="info-row">
+          <div><strong>Turno:</strong> <span id="turnLabel">—</span></div>
+          <div><strong>Dados:</strong> <span id="diceBox">—</span></div>
+        </div>
+        <div style="margin-top:6px" class="log" id="log"></div>
+      </div>
     </div>
 
-    <div>
+    <div class="board-wrap">
+      <div style="display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:12px"><div class="pill">Tablero</div><small class="muted">Interactúa con las casillas y administra propiedades</small></div>
+        <div><small class="muted">Inspirado en entity["company","Richup.io","monopoly alternative"]</small></div>
+      </div>
+
       <div class="board" id="board"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button id="resetBtn" class="secondary">Reiniciar</button>
+        <button id="exportBtn" class="secondary">Exportar partida</button>
+      </div>
     </div>
   </div>
 
+  <!-- Modal template -->
+  <div id="modalRoot" class="hidden"></div>
+
   <script>
-  // Lógica del juego (versión simplificada) en JavaScript
-  // Equivalente funcional a la versión Python que validaste
+  /* Implementación de la lógica del juego (equivalente a la versión Python) con UI mejorada.
+     - Guardado en localStorage
+     - Modal para compras/avisos
+     - Colores en bandas de propiedad
+     - Mejora visual en tokens y log
+  */
 
   const STARTING_MONEY = 1500;
   const BOARD_SIZE = 40;
 
-  class Property {
-    constructor(name, price, rent, color=null){
-      this.name = name; this.price = price; this.rent = rent; this.color = color; this.owner = null; this.mortgaged=false;
-    }
+  // Definiciones básicas
+  class Property{
+    constructor(name,price,rent,color=null){this.name=name;this.price=price;this.rent=rent;this.color=color;this.owner=null;this.mortgaged=false}
     isBuyable(){return this.price>0 && this.owner===null}
   }
+  class Player{constructor(name){this.name=name;this.pos=0;this.money=STARTING_MONEY;this.properties=[];this.inJail=false;this.jailTurns=0;this.bankrupt=false;this.getOutCards=0;this.doublesCount=0}}
 
-  class Player {
-    constructor(name){
-      this.name = name; this.pos = 0; this.money = STARTING_MONEY; this.properties = []; this.inJail=false; this.jailTurns=0; this.bankrupt=false; this.getOutCards = 0; this.doublesCount=0;
-    }
-    move(steps){
-      const prev=this.pos; this.pos=(this.pos+steps)%BOARD_SIZE; if(prev+steps>=BOARD_SIZE){ this.money+=200; log(`${this.name} pasó por Salida y cobra $200.`);} }
-    pay(amount, receiver=null){ if(this.money>=amount){ this.money-=amount; if(receiver) receiver.money+=amount; return true;} return false }
-    receive(amount){ this.money+=amount }
-    netWorth(){ return this.money + this.properties.reduce((s,p)=>s+(p.mortgaged?0:p.price),0) }
-  }
-
-  // Crear tablero con datos similares
   function createBoard(){
     const names = [
-      ["Salida",0,0],["Mediteráneo",60,2],["Community Chest",0,0],["Báltica",60,4],["Impuesto",0,0],
-      ["Estación 1",200,25],["Oriental",100,6],["Chance",0,0],["Vermont",100,6],["Connecticut",120,8],
-      ["Carcel",0,0],["St. Charles",140,10],["Electric Company",150,0],["States",140,10],["Virginia",160,12],
-      ["Estación 2",200,25],["St. James",180,14],["Community Chest",0,0],["Tennessee",180,14],["New York",200,16],
-      ["Parking",0,0],["Kentucky",220,18],["Chance",0,0],["Indiana",220,18],["Illinois",240,20],
-      ["Estación 3",200,25],["Atlantic",260,22],["Ventnor",260,22],["Water Works",150,0],["Marvin Gardens",280,24],
-      ["Go to Jail",0,0],["Pacific",300,26],["North Carolina",300,26],["Community Chest",0,0],["Pennsylvania",320,28],
-      ["Estación 4",200,25],["Chance",0,0],["Park Place",350,35],["Impuesto de lujo",0,0],["Boardwalk",400,50]
+      ["Salida",0,0],["Mediteráneo",60,2,"#8b5a2b"],["Community Chest",0,0],["Báltica",60,4,"#8b5a2b"],["Impuesto",0,0],
+      ["Estación 1",200,25],["Oriental",100,6,"#85d7ff"],["Chance",0,0],["Vermont",100,6,"#85d7ff"],["Connecticut",120,8,"#85d7ff"],
+      ["Carcel",0,0],["St. Charles",140,10,"#ff77e9"],["Electric Company",150,0],["States",140,10,"#ff77e9"],["Virginia",160,12,"#ff77e9"],
+      ["Estación 2",200,25],["St. James",180,14,"#ff914d"],["Community Chest",0,0],["Tennessee",180,14,"#ff914d"],["New York",200,16,"#ff914d"],
+      ["Parking",0,0],["Kentucky",220,18,"#ff4d4d"],["Chance",0,0],["Indiana",220,18,"#ff4d4d"],["Illinois",240,20,"#ff4d4d"],
+      ["Estación 3",200,25],["Atlantic",260,22,"#f7e36b"],["Ventnor",260,22,"#f7e36b"],["Water Works",150,0],["Marvin Gardens",280,24,"#f7e36b"],
+      ["Go to Jail",0,0],["Pacific",300,26,"#3ad77d"],["North Carolina",300,26,"#3ad77d"],["Community Chest",0,0],["Pennsylvania",320,28,"#3ad77d"],
+      ["Estación 4",200,25],["Chance",0,0],["Park Place",350,35,"#7ca0ff"],["Impuesto de lujo",0,0],["Boardwalk",400,50,"#7ca0ff"]
     ];
-    return names.map(n=> new Property(n[0], n[1], n[2]));
+    return names.map(n=> new Property(n[0],n[1],n[2],n[3]||null));
   }
 
-  // Mazos de cartas (acciones simples)
+  function shuffle(arr){ return arr.sort(()=>Math.random()-0.5); }
+
   function createChanceDeck(game){
     return shuffle([
       {text:'Avanza a Salida',action:p=>game.movePlayerTo(p,0)},
       {text:'Vaya a la Cárcel',action:p=>game.goToJail(p)},
-      {text:'Cobras $50',action:p=>p.receive(50)},
-      {text:'Paga $15',action:p=>{ if(!p.pay(15)) game.handleBankruptcy(p,null)}},
+      {text:'Cobras $50',action:p=>p.money+=50},
+      {text:'Paga $15',action:p=>{ if(!payOrBankrupt(p,15,game,null)){} }},
       {text:'Avanza a Illinois (24)',action:p=>game.movePlayerTo(p,24)},
       {text:'Avanza a Boardwalk (39)',action:p=>game.movePlayerTo(p,39)},
       {text:"Toma 'Salir de la cárcel'",action:p=>p.getOutCards++},
-      {text:'Cobras $150',action:p=>p.receive(150)}
+      {text:'Cobras $150',action:p=>p.money+=150}
     ]);
   }
   function createCommunityDeck(game){
     return shuffle([
-      {text:'Cobras $200',action:p=>p.receive(200)},
-      {text:'Paga $50',action:p=>{ if(!p.pay(50)) game.handleBankruptcy(p,null)}},
-      {text:'Repara propiedades: pagas $25',action:p=>{ if(!p.pay(25)) game.handleBankruptcy(p,null)}},
+      {text:'Cobras $200',action:p=>p.money+=200},
+      {text:'Paga $50',action:p=>{ if(!payOrBankrupt(p,50,game,null)){} }},
+      {text:'Repara propiedades: pagas $25',action:p=>{ if(!payOrBankrupt(p,25,game,null)){} }},
       {text:'Sal de la cárcel gratis',action:p=>p.getOutCards++},
-      {text:'Cobras $100',action:p=>p.receive(100)},
-      {text:'Pago médico $100',action:p=>{ if(!p.pay(100)) game.handleBankruptcy(p,null)}}
+      {text:'Cobras $100',action:p=>p.money+=100},
+      {text:'Pago médico $100',action:p=>{ if(!payOrBankrupt(p,100,game,null)){} }}
     ]);
   }
 
-  function shuffle(arr){ return arr.sort(()=>Math.random()-0.5) }
+  // Helper para pagar o declarar bancarrota
+  function payOrBankrupt(player,amount,game,creditor){ if(player.money>=amount){ player.money-=amount; if(creditor) creditor.money+=amount; return true } else { game.handleBankruptcy(player,creditor); return false } }
 
   class Game{
-    constructor(playerNames){
-      this.players = playerNames.map(n=> new Player(n)); this.board=createBoard(); this.currentIndex=0; this.round=1; this.chance=createChanceDeck(this); this.community=createCommunityDeck(this);
-    }
-    log(msg){ log(msg) }
-    movePlayerTo(player,position){ const prev=player.pos; player.pos=position; if(position<prev){ player.receive(200); log(`${player.name} avanzó y pasó por Salida, cobra $200.`) } this.handleSpace(player) }
-    goToJail(player){ log(`${player.name} va a la cárcel.`); player.pos=10; player.inJail=true; player.jailTurns=0 }
-    drawChance(player){ if(this.chance.length==0) this.chance=createChanceDeck(this); const c=this.chance.shift(); log(`Chance: ${c.text}`); c.action(player) }
-    drawCommunity(player){ if(this.community.length==0) this.community=createCommunityDeck(this); const c=this.community.shift(); log(`Community Chest: ${c.text}`); c.action(player) }
+    constructor(names){ this.players = names.map(n=> new Player(n)); this.board = createBoard(); this.currentIndex = 0; this.round=1; this.chance=createChanceDeck(this); this.community=createCommunityDeck(this); }
+    log(msg){ prependLog(msg) }
+    movePlayerTo(player,position){ const prev=player.pos; player.pos=position; if(position<prev){ player.money+=200; this.log(`${player.name} pasó por Salida y cobra $200.`) } renderPlayers(); renderBoard(); this.handleSpace(player) }
+    goToJail(player){ this.log(`${player.name} va a la cárcel.`); player.pos=10; player.inJail=true; player.jailTurns=0; renderPlayers(); }
+    drawChance(player){ if(this.chance.length===0) this.chance=createChanceDeck(this); const c=this.chance.shift(); this.log(`Chance: ${c.text}`); c.action(player); renderPlayers(); }
+    drawCommunity(player){ if(this.community.length===0) this.community=createCommunityDeck(this); const c=this.community.shift(); this.log(`Community Chest: ${c.text}`); c.action(player); renderPlayers(); }
 
-    handleSpace(player){ const space=this.board[player.pos]; updateSpaceLabel(space.name);
-      log(`${player.name} cayó en '${space.name}'.`);
-      if(space.name==='Impuesto'){ const amount=200; log(`Impuesto: paga $${amount}`); if(!player.pay(amount)) this.handleBankruptcy(player,null) }
-      else if(space.name==='Impuesto de lujo'){ const amount=100; log(`Impuesto de lujo: paga $${amount}`); if(!player.pay(amount)) this.handleBankruptcy(player,null)}
+    handleSpace(player){ const space=this.board[player.pos]; updateSpaceLabel(space.name); this.log(`${player.name} cayó en '${space.name}'.`);
+      if(space.name==='Impuesto'){ const amount=200; this.log(`Impuesto: paga $${amount}`); payOrBankrupt(player,amount,this,null); }
+      else if(space.name==='Impuesto de lujo'){ const amount=100; this.log(`Impuesto de lujo: paga $${amount}`); payOrBankrupt(player,amount,this,null); }
       else if(space.name==='Go to Jail'){ this.goToJail(player) }
       else if(space.name==='Chance'){ this.drawChance(player) }
       else if(space.name==='Community Chest'){ this.drawCommunity(player) }
-      else if(space.name==='Carcel'){ log('Solo visitas la Cárcel.') }
-      else if(space.price>0){ if(space.owner===null){ log(`Propiedad libre: ${space.name} Precio: $${space.price} Renta: $${space.rent}`); }
-        else if(space.owner===player){ log('Es tu propiedad.') }
-        else{ const rent=space.rent; log(`Propiedad de ${space.owner.name}. Debes pagar renta $${rent}.`); if(!player.pay(rent, space.owner)) this.handleBankruptcy(player,space.owner) }}
-      renderBoard(); renderPlayers();
-    }
+      else if(space.name==='Carcel'){ this.log('Solo visitas la Cárcel.') }
+      else if(space.price>0){ if(space.owner===null){ this.log(`Propiedad libre: ${space.name} Precio: $${space.price} Renta: $${space.rent}`); }
+        else if(space.owner===player){ this.log('Es tu propiedad.') }
+        else{ const rent=space.rent; this.log(`Propiedad de ${space.owner.name}. Debes pagar renta $${rent}.`); payOrBankrupt(player,rent,this,space.owner) }}
+      renderBoard(); renderPlayers(); }
 
-    handleBankruptcy(player,creditor){ log(`--- ¡${player.name} está en bancarrota! ---`); player.bankrupt=true; if(creditor){ player.properties.forEach(p=>{ p.owner=creditor; creditor.properties.push(p) }); log(`Las propiedades de ${player.name} pasan a ${creditor.name}.`) } else { player.properties.forEach(p=>p.owner=null); log(`Las propiedades de ${player.name} regresan al banco.`) } player.properties=[]; player.money=0; renderPlayers(); }
+    handleBankruptcy(player,creditor){ this.log(`--- ¡${player.name} está en bancarrota! ---`); player.bankrupt=true; if(creditor){ player.properties.forEach(p=>{ p.owner=creditor; creditor.properties.push(p) }); this.log(`Las propiedades de ${player.name} pasan a ${creditor.name}.`) } else { player.properties.forEach(p=>p.owner=null); this.log(`Las propiedades de ${player.name} regresan al banco.`) } player.properties=[]; player.money=0; renderPlayers(); }
 
-    rollDice(player){ const d1 = Math.floor(Math.random()*6)+1; const d2 = Math.floor(Math.random()*6)+1; showDice(d1,d2); log(`${player.name} sacó ${d1} y ${d2}. Total ${d1+d2}`);
-      if(player.inJail){ if(d1===d2){ log('Saliste de la cárcel por sacar dobles.'); player.inJail=false; player.jailTurns=0; player.move(d1+d2); this.handleSpace(player); }
-        else{ player.jailTurns++; log(`No sacaste dobles. Turno ${player.jailTurns} en la cárcel.`); if(player.jailTurns>=3){ log('Has pasado 3 turnos en la cárcel: pagas $50 y sales.'); if(player.pay(50)){ player.inJail=false; player.jailTurns=0; log('Pagaste $50 y saliste de la cárcel.'); } else { this.handleBankruptcy(player,null) } } } return }
+    rollDice(player){ const d1 = Math.floor(Math.random()*6)+1; const d2 = Math.floor(Math.random()*6)+1; showDice(d1,d2); this.log(`${player.name} sacó ${d1} y ${d2}. Total ${d1+d2}`);
+      if(player.inJail){ if(d1===d2){ this.log('Saliste de la cárcel por sacar dobles.'); player.inJail=false; player.jailTurns=0; player.pos=(player.pos+d1+d2)%BOARD_SIZE; this.handleSpace(player); }
+        else{ player.jailTurns++; this.log(`No sacaste dobles. Turno ${player.jailTurns} en la cárcel.`); if(player.jailTurns>=3){ this.log('Has pasado 3 turnos en la cárcel: pagas $50 y sales.'); if(payOrBankrupt(player,50,this,null)){ player.inJail=false; player.jailTurns=0; this.log('Pagaste $50 y saliste de la cárcel.'); } } }
+        return }
 
-      player.move(d1+d2); this.handleSpace(player);
-      if(d1===d2){ player.doublesCount++; if(player.doublesCount>=3){ log('Tres dobles seguidos: ¡Vas a la cárcel!'); this.goToJail(player); player.doublesCount=0 } else { log(`${player.name} sacó dobles y puede tirar otra vez.`) } }
+      player.pos=(player.pos + d1 + d2) % BOARD_SIZE; this.handleSpace(player);
+      if(d1===d2){ player.doublesCount++; if(player.doublesCount>=3){ this.log('Tres dobles seguidos: ¡Vas a la cárcel!'); this.goToJail(player); player.doublesCount=0 } else { this.log(`${player.name} sacó dobles y puede tirar otra vez.`) } }
       else{ player.doublesCount=0 }
     }
 
-    nextPlayer(){ do{ this.currentIndex = (this.currentIndex+1) % this.players.length; if(this.currentIndex===0) this.round++; } while(this.players[this.currentIndex].bankrupt); }
-
+    nextPlayer(){ do{ this.currentIndex=(this.currentIndex+1)%this.players.length; if(this.currentIndex===0) this.round++; } while(this.players[this.currentIndex].bankrupt); renderPlayers(); }
     activePlayers(){ return this.players.filter(p=>!p.bankrupt) }
   }
 
-  // UI / DOM helpers
-  const boardEl = document.getElementById('board'); const logEl = document.getElementById('log'); const playersArea = document.getElementById('playersArea');
-  const turnLabel = document.getElementById('turnLabel'); const spaceLabel = document.getElementById('spaceLabel'); const diceBox=document.getElementById('diceBox');
-  let game=null;
+  // UI helpers
+  const boardEl = document.getElementById('board'); const logEl = document.getElementById('log'); const playersArea = document.getElementById('playersArea'); const turnLabel=document.getElementById('turnLabel'); const diceBox=document.getElementById('diceBox'); const modalRoot=document.getElementById('modalRoot');
+  let game = null;
 
-  function initBoardDOM(){ boardEl.innerHTML=''; for(let i=0;i<BOARD_SIZE;i++){ const sq = document.createElement('div'); sq.className='square'; sq.id = 'sq'+i; const name = document.createElement('div'); name.className='name'; name.innerText=''; const prop = document.createElement('div'); prop.className='prop'; prop.innerText=''; sq.appendChild(name); sq.appendChild(prop); boardEl.appendChild(sq); } }
-
-  function renderBoard(){ for(let i=0;i<BOARD_SIZE;i++){ const sq = document.getElementById('sq'+i); const data = game.board[i]; sq.querySelector('.name').innerText = data.name; let ownerText=''; if(data.owner) ownerText = '› '+data.owner.name; let priceText = data.price>0 ? (`$${data.price} / renta $${data.rent}`) : '';
-      sq.querySelector('.prop').innerText = priceText + (ownerText?(' '+ownerText):''); // marcar dueño
-      sq.style.border = data.owner ? '2px solid rgba(255,255,255,0.06)' : 'none'; }
-    // marcar posiciones de jugadores
-    // limpiar tokens
-    document.querySelectorAll('.token').forEach(t=>t.remove());
-    game.players.forEach((p,idx)=>{ if(!p.bankrupt){ const sq = document.getElementById('sq'+p.pos); const token = document.createElement('div'); token.className='token'; token.style.fontSize='12px'; token.style.marginTop='4px'; token.innerText = `@${p.name}`; token.style.opacity = p.inJail ? '0.6' : '1'; sq.appendChild(token); } });
+  function initBoardDOM(){ boardEl.innerHTML=''; for(let i=0;i<BOARD_SIZE;i++){ const sq=document.createElement('div'); sq.className='square'; sq.id='sq'+i; const colorBand=document.createElement('div'); colorBand.className='color-band'; colorBand.style.background='transparent'; const title=document.createElement('div'); title.className='title'; title.innerText=''; const sub=document.createElement('div'); sub.className='sub'; sub.innerText=''; sq.appendChild(colorBand); sq.appendChild(title); sq.appendChild(sub); boardEl.appendChild(sq); }
+    // center tile (visual) - optional
+    const center = document.createElement('div'); center.className='center-tile'; center.innerHTML = `<div style="text-align:center"><h2>Monopoly</h2><p class="muted">Versión web — interfaz mejorada</p></div>`; boardEl.appendChild(center);
   }
 
-  function renderPlayers(){ playersArea.innerHTML=''; game.players.forEach((p,idx)=>{ const card=document.createElement('div'); card.className='player-card'; card.innerHTML = `<div style="font-weight:700">${p.name} ${p.bankrupt?'<span style="color:#ff6b6b">(Bancarrota)</span>':''}</div>
-        <div>Dinero: $${p.money}</div>
-        <div>Pos: ${p.pos} - ${game.board[p.pos].name}</div>
-        <div>Propiedades: ${p.properties.length}</div>
-        <div>Salir cárcel: ${p.getOutCards}</div>`; playersArea.appendChild(card); });
-
-    turnLabel.innerText = `${game.players[game.currentIndex].name} (Ronda ${game.round})`;
+  function renderBoard(){ for(let i=0;i<BOARD_SIZE;i++){ const sq=document.getElementById('sq'+i); const data=game.board[i]; sq.querySelector('.title').innerText = data.name; sq.querySelector('.sub').innerText = data.price>0?`$${data.price} • renta $${data.rent}`:''; const band = sq.querySelector('.color-band'); band.style.background = data.color || 'transparent'; // owner badge
+      const existingToken = sq.querySelector('.token'); if(existingToken) existingToken.remove(); if(data.owner){ sq.style.border = '2px solid rgba(255,255,255,0.05)'; sq.querySelector('.sub').innerText += ` • ${data.owner.name}` } else { sq.style.border = '1px solid rgba(255,255,255,0.02)' }
+    }
+    // tokens
+    document.querySelectorAll('.player-token').forEach(n=>n.remove());
+    game.players.forEach((p,idx)=>{ if(!p.bankrupt){ const sq = document.getElementById('sq'+p.pos); const tok = document.createElement('div'); tok.className='token player-token'; tok.innerText = `@${p.name}`; tok.style.right = (6 + idx*58)+'px'; sq.appendChild(tok); } });
   }
 
-  function log(msg){ const p=document.createElement('div'); p.innerText = msg; logEl.prepend(p); }
-  function updateSpaceLabel(text){ spaceLabel.innerText = text }
+  function renderPlayers(){ playersArea.innerHTML=''; game.players.forEach((p,idx)=>{ const el=document.createElement('div'); el.className='player'; el.innerHTML = `<div class="avatar">${p.name.charAt(0).toUpperCase()}</div><div class="meta"><b>${p.name}</b><small>Dinero: $${p.money} • Pos: ${p.pos}</small></div><div class="status">${p.inJail?'<small style="color:#ffb86b">En cárcel</small>':p.bankrupt?'<small style="color:#ff6b6b">Bancarrota</small>':'Activo'}</div>`; playersArea.appendChild(el); }); turnLabel.innerText = `${game.players[game.currentIndex].name} (R${game.round})`; }
+
+  function prependLog(txt){ const d=document.createElement('div'); d.innerText = `${new Date().toLocaleTimeString()} — ${txt}`; logEl.prepend(d); }
+  function updateSpaceLabel(text){ /* no-op in this layout */ }
   function showDice(d1,d2){ diceBox.innerText = `${d1} • ${d2}` }
 
-  // Botones y eventos
+  // Modal utils
+  function openModal(html){ modalRoot.innerHTML = `<div class="modal-back"> <div class="modal">${html}<div style="display:flex;justify-content:flex-end;margin-top:12px"><button id="closeModal" class="secondary">Cerrar</button></div></div></div>`; modalRoot.classList.remove('hidden'); document.getElementById('closeModal').onclick = ()=>{ modalRoot.innerHTML=''; modalRoot.classList.add('hidden') } }
+
+  // Eventos
   document.getElementById('startBtn').addEventListener('click', ()=>{
-    const n = parseInt(document.getElementById('playerCount').value,10); const names=[]; for(let i=0;i<n;i++) names.push(prompt(`Nombre jugador ${i+1}:`) || `Jugador${i+1}`);
-    game = new Game(names); initBoardDOM(); renderBoard(); renderPlayers(); log('Juego iniciado.');
+    const n = parseInt(document.getElementById('playerCount').value,10); const names=[]; for(let i=0;i<n;i++){ const name = prompt(`Nombre jugador ${i+1}:`) || `Jugador${i+1}`; names.push(name) }
+    game = new Game(names); initBoardDOM(); renderBoard(); renderPlayers(); prependLog('Partida creada.'); saveGame();
   });
 
-  document.getElementById('rollBtn').addEventListener('click', ()=>{
-    if(!game) return alert('Inicia el juego primero.'); const player = game.players[game.currentIndex]; if(player.bankrupt) return; if(player.inJail){ game.rollDice(player); renderPlayers(); renderBoard(); maybeAdvanceAfterRoll(player); return } game.rollDice(player); renderPlayers(); renderBoard(); maybeAdvanceAfterRoll(player);
+  document.getElementById('rollBtn').addEventListener('click', ()=>{ if(!game) return alert('Crea una partida primero.'); const p = game.players[game.currentIndex]; if(p.bankrupt) return; game.rollDice(p); renderBoard(); renderPlayers(); saveGame(); checkWin(); });
+
+  document.getElementById('buyBtn').addEventListener('click', ()=>{ if(!game) return; const p = game.players[game.currentIndex]; const space = game.board[p.pos]; if(space.price<=0) return alert('No es comprable.'); if(space.owner) return alert('Ya tiene dueño.'); const confirmBuy = confirm(`¿${p.name} comprar ${space.name} por $${space.price}?`); if(confirmBuy){ if(p.money>=space.price){ p.money -= space.price; space.owner = p; p.properties.push(space); prependLog(`${p.name} compró ${space.name} por $${space.price}`); renderBoard(); renderPlayers(); saveGame(); } else { alert('No tienes dinero suficiente.')}} });
+
+  document.getElementById('endTurnBtn').addEventListener('click', ()=>{ if(!game) return; game.nextPlayer(); renderPlayers(); prependLog('Turno terminado.'); saveGame(); checkWin(); });
+
+  document.getElementById('saveBtn').addEventListener('click', ()=>{ if(!game) return; saveGame(); alert('Partida guardada en el navegador (LocalStorage).') });
+  document.getElementById('resetBtn').addEventListener('click', ()=>{ if(confirm('Reiniciar la partida y limpiar datos guardados?')){ localStorage.removeItem('monopoly_save'); location.reload(); } });
+  document.getElementById('exportBtn').addEventListener('click', ()=>{ if(!game) return; const data = JSON.stringify(game); const blob = new Blob([data],{type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='monopoly_save.json'; a.click(); URL.revokeObjectURL(url); });
+
+  // Guardar / cargar
+  function saveGame(){ if(!game) return; try{ const payload = {players:game.players.map(p=>({name:p.name,pos:p.pos,money:p.money,properties:p.properties.map(x=>x.name),inJail:p.inJail,jailTurns:p.jailTurns,bankrupt:p.bankrupt,getOutCards:p.getOutCards,doublesCount:p.doublesCount})),board:game.board.map(b=>({name:b.name,price:b.price,rent:b.rent,color:b.color,owner:b.owner?b.owner.name:null})),currentIndex:game.currentIndex,round:game.round}; localStorage.setItem('monopoly_save',JSON.stringify(payload)); prependLog('Guardado automático.'); }catch(e){ console.error(e) } }
+  function loadGame(){ const raw = localStorage.getItem('monopoly_save'); if(!raw) return null; try{ const s = JSON.parse(raw); // reconstruir objetos
+      const names = s.players.map(p=>p.name); const g = new Game(names); // asignar datos
+      g.currentIndex = s.currentIndex; g.round = s.round; // asignar tablero propietario
+      s.board.forEach((b,i)=>{ g.board[i].owner = b.owner ? g.players.find(pl=>pl.name===b.owner) : null; if(g.board[i].owner) g.board[i].owner.properties.push(g.board[i]); });
+      s.players.forEach((p,i)=>{ const pl = g.players[i]; pl.pos = p.pos; pl.money = p.money; pl.inJail = p.inJail; pl.jailTurns = p.jailTurns; pl.bankrupt = p.bankrupt; pl.getOutCards = p.getOutCards; pl.doublesCount = p.doublesCount; });
+      return g; }catch(e){ console.error(e); return null } }
+
+  // carga automática al inicio
+  window.addEventListener('load', ()=>{ const loaded = loadGame(); if(loaded){ if(confirm('Se encontró una partida guardada. ¿Deseas cargarla?')){ game = loaded; initBoardDOM(); renderBoard(); renderPlayers(); prependLog('Partida cargada desde almacenamiento local.'); } }
   });
 
-  function maybeAdvanceAfterRoll(player){ // si sacó dobles y no fue tres dobles, no avanzamos; si no, pasar al siguiente
-    if(player.inJail) return; if(player.doublesCount>0 && !player.bankrupt){ // se permite tirar otra vez
-      // NO avanzar el turno automáticamente: el usuario debe apretar tirar otra vez o terminar turno
-      log('Puedes tirar otra vez o terminar el turno.');
-    } else { // avanzar automáticamente al siguiente jugador
-      game.nextPlayer(); renderPlayers(); }
-    checkWin(); }
+  function checkWin(){ const active = game.activePlayers(); if(active.length<=1){ if(active.length===1){ alert(`${active[0].name} gana! Dinero: $${active[0].money}`); prependLog(`--- ${active[0].name} gana el juego! ---`); } else { alert('Todos en bancarrota. Fin del juego.'); prependLog('Todos en bancarrota. Fin del juego.'); } } }
 
-  document.getElementById('endTurnBtn').addEventListener('click', ()=>{ if(!game) return; game.nextPlayer(); renderPlayers(); log('Turno terminado.'); checkWin(); });
+  // helpers
+  function showDice(d1,d2){ document.getElementById('diceBox').innerText = `${d1} • ${d2}` }
 
-  document.getElementById('buyBtn').addEventListener('click', ()=>{ if(!game) return; const player = game.players[game.currentIndex]; const space = game.board[player.pos]; if(space.price<=0) return alert('Esta casilla no es comprable.'); if(space.owner) return alert('Ya tiene dueño.'); if(player.money < space.price) return alert('No tienes dinero para comprar.'); if(confirm(`¿${player.name} comprar ${space.name} por $${space.price}?`)){ player.pay(space.price); space.owner = player; player.properties.push(space); log(`${player.name} compró ${space.name} por $${space.price}.`); renderPlayers(); renderBoard(); } });
-
-  document.getElementById('useJailCardBtn').addEventListener('click', ()=>{ if(!game) return; const player = game.players[game.currentIndex]; if(player.getOutCards>0 && player.inJail){ player.getOutCards--; player.inJail=false; player.jailTurns=0; log(`${player.name} usó carta 'Salir de la cárcel'.`); renderPlayers(); } else alert('No tienes carta o no estás en la cárcel.'); });
-
-  document.getElementById('payToLeaveBtn').addEventListener('click', ()=>{ if(!game) return; const player = game.players[game.currentIndex]; if(player.inJail){ if(player.pay(50)){ player.inJail=false; player.jailTurns=0; log(`${player.name} pagó $50 y salió de la cárcel.`); renderPlayers(); } else { alert('No tienes dinero para pagar $50.'); } } else alert('No estás en la cárcel.'); });
-
-  function checkWin(){ const active = game.activePlayers(); if(active.length<=1){ if(active.length===1){ alert(`${active[0].name} gana! Dinero: $${active[0].money} Patrimonio: $${active[0].netWorth()}`); log(`--- ${active[0].name} gana el juego! ---`); } else { alert('Todos en bancarrota. Fin del juego.'); } }
-  }
-
-  // Inicializar DOM de tablero desde el inicio
+  // iniciar estructura
   initBoardDOM();
-  
   </script>
 </body>
 </html>
