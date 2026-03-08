@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Monopoly - Versión web (simplificada)</title>
+  <style>
+    :root{--bg:#0b1220;--card:#0f1724;--accent:#1f8ef1;--text:#e6eef9}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:linear-gradient(180deg,#07132a 0%, #071a2f 100%); color:var(--text); margin:0; padding:16px}
+    .container{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:460px 1fr;gap:16px}
+    .board{background:var(--card);border-radius:12px;padding:12px;display:grid;grid-template-columns:repeat(11,1fr);grid-auto-rows:56px;gap:6px}
+    .square{background:rgba(255,255,255,0.03);border-radius:6px;padding:4px;font-size:11px;display:flex;flex-direction:column;justify-content:space-between}
+    .square .name{font-weight:600}
+    .prop{font-size:12px;opacity:0.9}
+    .controls{background:var(--card);border-radius:12px;padding:12px}
+    .log{height:300px;overflow:auto;background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;font-size:13px}
+    button{background:var(--accent);color:#032033;border:none;padding:8px 10px;border-radius:8px;font-weight:700;cursor:pointer}
+    button.secondary{background:transparent;border:1px solid rgba(255,255,255,0.08);color:var(--text);font-weight:600}
+    .players{display:flex;gap:8px;margin-bottom:8px}
+    .player-card{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;flex:1}
+    .board-legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .dice{font-size:20px;font-weight:800}
+    .footer{margin-top:12px;font-size:13px;color:rgba(255,255,255,0.6)}
+    .hidden{display:none}
+    /* simple responsive */
+    @media(max-width:900px){.container{grid-template-columns:1fr;}.board{grid-template-columns:repeat(8,1fr)}}
+  </style>
+</head>
+<body>
+  <h1>Monopoly - Versión web (simplificada)</h1>
+  <div class="container">
+    <div>
+      <div class="controls">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <label>Jugadores: </label>
+          <select id="playerCount"><option>2</option><option>3</option><option>4</option></select>
+          <button id="startBtn">Iniciar juego</button>
+        </div>
+        <div class="players" id="playersArea"></div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <button id="rollBtn" class="secondary">Tirar dados</button>
+          <div class="dice" id="diceBox">—</div>
+          <button id="endTurnBtn" class="secondary">Terminar turno</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <button id="buyBtn" class="secondary">Comprar propiedad</button>
+          <button id="useJailCardBtn" class="secondary">Usar carta salir cárcel</button>
+          <button id="payToLeaveBtn" class="secondary">Pagar $50 para salir cárcel</button>
+        </div>
+        <div style="margin-top:8px">
+          <strong>Turno:</strong> <span id="turnLabel">—</span>
+        </div>
+        <div style="margin-top:8px">
+          <strong>Casilla actual:</strong> <span id="spaceLabel">—</span>
+        </div>
+        <div style="margin-top:8px">
+          <div class="log" id="log"></div>
+        </div>
+      </div>
+      <div class="footer">Reglas simplificadas: 2-4 jugadores, $1500 inicial, no hay casas/hoteles, chance/community simplified, cárcel, impuestos, bancarrota.</div>
+    </div>
+
+    <div>
+      <div class="board" id="board"></div>
+    </div>
+  </div>
+
+  <script>
+  // Lógica del juego (versión simplificada) en JavaScript
+  // Equivalente funcional a la versión Python que validaste
+
+  const STARTING_MONEY = 1500;
+  const BOARD_SIZE = 40;
+
+  class Property {
+    constructor(name, price, rent, color=null){
+      this.name = name; this.price = price; this.rent = rent; this.color = color; this.owner = null; this.mortgaged=false;
+    }
+    isBuyable(){return this.price>0 && this.owner===null}
+  }
+
+  class Player {
+    constructor(name){
+      this.name = name; this.pos = 0; this.money = STARTING_MONEY; this.properties = []; this.inJail=false; this.jailTurns=0; this.bankrupt=false; this.getOutCards = 0; this.doublesCount=0;
+    }
+    move(steps){
+      const prev=this.pos; this.pos=(this.pos+steps)%BOARD_SIZE; if(prev+steps>=BOARD_SIZE){ this.money+=200; log(`${this.name} pasó por Salida y cobra $200.`);} }
+    pay(amount, receiver=null){ if(this.money>=amount){ this.money-=amount; if(receiver) receiver.money+=amount; return true;} return false }
+    receive(amount){ this.money+=amount }
+    netWorth(){ return this.money + this.properties.reduce((s,p)=>s+(p.mortgaged?0:p.price),0) }
+  }
+
+  // Crear tablero con datos similares
+  function createBoard(){
+    const names = [
+      ["Salida",0,0],["Mediteráneo",60,2],["Community Chest",0,0],["Báltica",60,4],["Impuesto",0,0],
+      ["Estación 1",200,25],["Oriental",100,6],["Chance",0,0],["Vermont",100,6],["Connecticut",120,8],
+      ["Carcel",0,0],["St. Charles",140,10],["Electric Company",150,0],["States",140,10],["Virginia",160,12],
+      ["Estación 2",200,25],["St. James",180,14],["Community Chest",0,0],["Tennessee",180,14],["New York",200,16],
+      ["Parking",0,0],["Kentucky",220,18],["Chance",0,0],["Indiana",220,18],["Illinois",240,20],
+      ["Estación 3",200,25],["Atlantic",260,22],["Ventnor",260,22],["Water Works",150,0],["Marvin Gardens",280,24],
+      ["Go to Jail",0,0],["Pacific",300,26],["North Carolina",300,26],["Community Chest",0,0],["Pennsylvania",320,28],
+      ["Estación 4",200,25],["Chance",0,0],["Park Place",350,35],["Impuesto de lujo",0,0],["Boardwalk",400,50]
+    ];
+    return names.map(n=> new Property(n[0], n[1], n[2]));
+  }
+
+  // Mazos de cartas (acciones simples)
+  function createChanceDeck(game){
+    return shuffle([
+      {text:'Avanza a Salida',action:p=>game.movePlayerTo(p,0)},
+      {text:'Vaya a la Cárcel',action:p=>game.goToJail(p)},
+      {text:'Cobras $50',action:p=>p.receive(50)},
+      {text:'Paga $15',action:p=>{ if(!p.pay(15)) game.handleBankruptcy(p,null)}},
+      {text:'Avanza a Illinois (24)',action:p=>game.movePlayerTo(p,24)},
+      {text:'Avanza a Boardwalk (39)',action:p=>game.movePlayerTo(p,39)},
+      {text:"Toma 'Salir de la cárcel'",action:p=>p.getOutCards++},
+      {text:'Cobras $150',action:p=>p.receive(150)}
+    ]);
+  }
+  function createCommunityDeck(game){
+    return shuffle([
+      {text:'Cobras $200',action:p=>p.receive(200)},
+      {text:'Paga $50',action:p=>{ if(!p.pay(50)) game.handleBankruptcy(p,null)}},
+      {text:'Repara propiedades: pagas $25',action:p=>{ if(!p.pay(25)) game.handleBankruptcy(p,null)}},
+      {text:'Sal de la cárcel gratis',action:p=>p.getOutCards++},
+      {text:'Cobras $100',action:p=>p.receive(100)},
+      {text:'Pago médico $100',action:p=>{ if(!p.pay(100)) game.handleBankruptcy(p,null)}}
+    ]);
+  }
+
+  function shuffle(arr){ return arr.sort(()=>Math.random()-0.5) }
+
+  class Game{
+    constructor(playerNames){
+      this.players = playerNames.map(n=> new Player(n)); this.board=createBoard(); this.currentIndex=0; this.round=1; this.chance=createChanceDeck(this); this.community=createCommunityDeck(this);
+    }
+    log(msg){ log(msg) }
+    movePlayerTo(player,position){ const prev=player.pos; player.pos=position; if(position<prev){ player.receive(200); log(`${player.name} avanzó y pasó por Salida, cobra $200.`) } this.handleSpace(player) }
+    goToJail(player){ log(`${player.name} va a la cárcel.`); player.pos=10; player.inJail=true; player.jailTurns=0 }
+    drawChance(player){ if(this.chance.length==0) this.chance=createChanceDeck(this); const c=this.chance.shift(); log(`Chance: ${c.text}`); c.action(player) }
+    drawCommunity(player){ if(this.community.length==0) this.community=createCommunityDeck(this); const c=this.community.shift(); log(`Community Chest: ${c.text}`); c.action(player) }
+
+    handleSpace(player){ const space=this.board[player.pos]; updateSpaceLabel(space.name);
+      log(`${player.name} cayó en '${space.name}'.`);
+      if(space.name==='Impuesto'){ const amount=200; log(`Impuesto: paga $${amount}`); if(!player.pay(amount)) this.handleBankruptcy(player,null) }
+      else if(space.name==='Impuesto de lujo'){ const amount=100; log(`Impuesto de lujo: paga $${amount}`); if(!player.pay(amount)) this.handleBankruptcy(player,null)}
+      else if(space.name==='Go to Jail'){ this.goToJail(player) }
+      else if(space.name==='Chance'){ this.drawChance(player) }
+      else if(space.name==='Community Chest'){ this.drawCommunity(player) }
+      else if(space.name==='Carcel'){ log('Solo visitas la Cárcel.') }
+      else if(space.price>0){ if(space.owner===null){ log(`Propiedad libre: ${space.name} Precio: $${space.price} Renta: $${space.rent}`); }
+        else if(space.owner===player){ log('Es tu propiedad.') }
+        else{ const rent=space.rent; log(`Propiedad de ${space.owner.name}. Debes pagar renta $${rent}.`); if(!player.pay(rent, space.owner)) this.handleBankruptcy(player,space.owner) }}
+      renderBoard(); renderPlayers();
+    }
+
+    handleBankruptcy(player,creditor){ log(`--- ¡${player.name} está en bancarrota! ---`); player.bankrupt=true; if(creditor){ player.properties.forEach(p=>{ p.owner=creditor; creditor.properties.push(p) }); log(`Las propiedades de ${player.name} pasan a ${creditor.name}.`) } else { player.properties.forEach(p=>p.owner=null); log(`Las propiedades de ${player.name} regresan al banco.`) } player.properties=[]; player.money=0; renderPlayers(); }
+
+    rollDice(player){ const d1 = Math.floor(Math.random()*6)+1; const d2 = Math.floor(Math.random()*6)+1; showDice(d1,d2); log(`${player.name} sacó ${d1} y ${d2}. Total ${d1+d2}`);
+      if(player.inJail){ if(d1===d2){ log('Saliste de la cárcel por sacar dobles.'); player.inJail=false; player.jailTurns=0; player.move(d1+d2); this.handleSpace(player); }
+        else{ player.jailTurns++; log(`No sacaste dobles. Turno ${player.jailTurns} en la cárcel.`); if(player.jailTurns>=3){ log('Has pasado 3 turnos en la cárcel: pagas $50 y sales.'); if(player.pay(50)){ player.inJail=false; player.jailTurns=0; log('Pagaste $50 y saliste de la cárcel.'); } else { this.handleBankruptcy(player,null) } } } return }
+
+      player.move(d1+d2); this.handleSpace(player);
+      if(d1===d2){ player.doublesCount++; if(player.doublesCount>=3){ log('Tres dobles seguidos: ¡Vas a la cárcel!'); this.goToJail(player); player.doublesCount=0 } else { log(`${player.name} sacó dobles y puede tirar otra vez.`) } }
+      else{ player.doublesCount=0 }
+    }
+
+    nextPlayer(){ do{ this.currentIndex = (this.currentIndex+1) % this.players.length; if(this.currentIndex===0) this.round++; } while(this.players[this.currentIndex].bankrupt); }
+
+    activePlayers(){ return this.players.filter(p=>!p.bankrupt) }
+  }
+
+  // UI / DOM helpers
+  const boardEl = document.getElementById('board'); const logEl = document.getElementById('log'); const playersArea = document.getElementById('playersArea');
+  const turnLabel = document.getElementById('turnLabel'); const spaceLabel = document.getElementById('spaceLabel'); const diceBox=document.getElementById('diceBox');
+  let game=null;
+
+  function initBoardDOM(){ boardEl.innerHTML=''; for(let i=0;i<BOARD_SIZE;i++){ const sq = document.createElement('div'); sq.className='square'; sq.id = 'sq'+i; const name = document.createElement('div'); name.className='name'; name.innerText=''; const prop = document.createElement('div'); prop.className='prop'; prop.innerText=''; sq.appendChild(name); sq.appendChild(prop); boardEl.appendChild(sq); } }
+
+  function renderBoard(){ for(let i=0;i<BOARD_SIZE;i++){ const sq = document.getElementById('sq'+i); const data = game.board[i]; sq.querySelector('.name').innerText = data.name; let ownerText=''; if(data.owner) ownerText = '› '+data.owner.name; let priceText = data.price>0 ? (`$${data.price} / renta $${data.rent}`) : '';
+      sq.querySelector('.prop').innerText = priceText + (ownerText?(' '+ownerText):''); // marcar dueño
+      sq.style.border = data.owner ? '2px solid rgba(255,255,255,0.06)' : 'none'; }
+    // marcar posiciones de jugadores
+    // limpiar tokens
+    document.querySelectorAll('.token').forEach(t=>t.remove());
+    game.players.forEach((p,idx)=>{ if(!p.bankrupt){ const sq = document.getElementById('sq'+p.pos); const token = document.createElement('div'); token.className='token'; token.style.fontSize='12px'; token.style.marginTop='4px'; token.innerText = `@${p.name}`; token.style.opacity = p.inJail ? '0.6' : '1'; sq.appendChild(token); } });
+  }
+
+  function renderPlayers(){ playersArea.innerHTML=''; game.players.forEach((p,idx)=>{ const card=document.createElement('div'); card.className='player-card'; card.innerHTML = `<div style="font-weight:700">${p.name} ${p.bankrupt?'<span style="color:#ff6b6b">(Bancarrota)</span>':''}</div>
+        <div>Dinero: $${p.money}</div>
+        <div>Pos: ${p.pos} - ${game.board[p.pos].name}</div>
+        <div>Propiedades: ${p.properties.length}</div>
+        <div>Salir cárcel: ${p.getOutCards}</div>`; playersArea.appendChild(card); });
+
+    turnLabel.innerText = `${game.players[game.currentIndex].name} (Ronda ${game.round})`;
+  }
+
+  function log(msg){ const p=document.createElement('div'); p.innerText = msg; logEl.prepend(p); }
+  function updateSpaceLabel(text){ spaceLabel.innerText = text }
+  function showDice(d1,d2){ diceBox.innerText = `${d1} • ${d2}` }
+
+  // Botones y eventos
+  document.getElementById('startBtn').addEventListener('click', ()=>{
+    const n = parseInt(document.getElementById('playerCount').value,10); const names=[]; for(let i=0;i<n;i++) names.push(prompt(`Nombre jugador ${i+1}:`) || `Jugador${i+1}`);
+    game = new Game(names); initBoardDOM(); renderBoard(); renderPlayers(); log('Juego iniciado.');
+  });
+
+  document.getElementById('rollBtn').addEventListener('click', ()=>{
+    if(!game) return alert('Inicia el juego primero.'); const player = game.players[game.currentIndex]; if(player.bankrupt) return; if(player.inJail){ game.rollDice(player); renderPlayers(); renderBoard(); maybeAdvanceAfterRoll(player); return } game.rollDice(player); renderPlayers(); renderBoard(); maybeAdvanceAfterRoll(player);
+  });
+
+  function maybeAdvanceAfterRoll(player){ // si sacó dobles y no fue tres dobles, no avanzamos; si no, pasar al siguiente
+    if(player.inJail) return; if(player.doublesCount>0 && !player.bankrupt){ // se permite tirar otra vez
+      // NO avanzar el turno automáticamente: el usuario debe apretar tirar otra vez o terminar turno
+      log('Puedes tirar otra vez o terminar el turno.');
+    } else { // avanzar automáticamente al siguiente jugador
+      game.nextPlayer(); renderPlayers(); }
+    checkWin(); }
+
+  document.getElementById('endTurnBtn').addEventListener('click', ()=>{ if(!game) return; game.nextPlayer(); renderPlayers(); log('Turno terminado.'); checkWin(); });
+
+  document.getElementById('buyBtn').addEventListener('click', ()=>{ if(!game) return; const player = game.players[game.currentIndex]; const space = game.board[player.pos]; if(space.price<=0) return alert('Esta casilla no es comprable.'); if(space.owner) return alert('Ya tiene dueño.'); if(player.money < space.price) return alert('No tienes dinero para comprar.'); if(confirm(`¿${player.name} comprar ${space.name} por $${space.price}?`)){ player.pay(space.price); space.owner = player; player.properties.push(space); log(`${player.name} compró ${space.name} por $${space.price}.`); renderPlayers(); renderBoard(); } });
+
+  document.getElementById('useJailCardBtn').addEventListener('click', ()=>{ if(!game) return; const player = game.players[game.currentIndex]; if(player.getOutCards>0 && player.inJail){ player.getOutCards--; player.inJail=false; player.jailTurns=0; log(`${player.name} usó carta 'Salir de la cárcel'.`); renderPlayers(); } else alert('No tienes carta o no estás en la cárcel.'); });
+
+  document.getElementById('payToLeaveBtn').addEventListener('click', ()=>{ if(!game) return; const player = game.players[game.currentIndex]; if(player.inJail){ if(player.pay(50)){ player.inJail=false; player.jailTurns=0; log(`${player.name} pagó $50 y salió de la cárcel.`); renderPlayers(); } else { alert('No tienes dinero para pagar $50.'); } } else alert('No estás en la cárcel.'); });
+
+  function checkWin(){ const active = game.activePlayers(); if(active.length<=1){ if(active.length===1){ alert(`${active[0].name} gana! Dinero: $${active[0].money} Patrimonio: $${active[0].netWorth()}`); log(`--- ${active[0].name} gana el juego! ---`); } else { alert('Todos en bancarrota. Fin del juego.'); } }
+  }
+
+  // Inicializar DOM de tablero desde el inicio
+  initBoardDOM();
+  
+  </script>
+</body>
+</html>
